@@ -5,8 +5,8 @@ var favicon = require('static-favicon');
 var cookieParser = require('cookie-parser');
 var bodyParser = require('body-parser');
 
-//We won't need this.
-//var logger = require('morgan');
+// we won't need this.
+// var logger = require('morgan');
 var log = log4js.getLogger("app");
 
 var routes = require('./routes/index');
@@ -44,35 +44,34 @@ app.use(function(req, res, next) {
 // development error handler
 // will print stacktrace
 if (app.get('env') === 'development') {
-    // Special handler for 404 errors in development
     app.use(function(err, req, res, next) {
+        // special handler for 404 errors in development
         if (err.status === 404) {
             log.warn("404 Not Found in development environment:", err);
             res.status(404);
             res.render('error', {
                 message: 'Resource not found - Development Environment',
-                error: err // In development, we show the full error details
+                error: err
             });
-        } else {
-            // Pass other errors to the general handler
-            next(err);
         }
-    });
-
-    // General development error handler
-    app.use(function(err, req, res, next) {
-        log.error("Something went wrong:", err);
-        res.status(err.status || 500);
-        res.render('error', {
-            message: err.message,
-            error: err
-        });
+        // pass other errors to the general handler
+        else {
+            // general development error handler
+            app.use(function(err, req, res, next) {
+                log.error("Something went wrong:", err);
+                res.status(err.status || 500);
+                res.render('error', {
+                    message: err.message,
+                    error: err
+                });
+            });
+        }
     });
 }
 
 // Production-specific handlers for certain status codes
-// 403 Forbidden handler for production
 app.use(function(err, req, res, next) {
+    // 403 Forbidden handler for production
     if (err.status === 403) {
         log.error("Access Forbidden (403):", err);
         res.status(403);
@@ -80,34 +79,23 @@ app.use(function(err, req, res, next) {
             message: 'Access Forbidden',
             error: {} // No stacktrace leaked to user
         });
-    } else {
-        next(err);
-    }
-});
-
-// 504 Gateway Timeout handler for production
-app.use(function(err, req, res, next) {
-    if (err.status === 504) {
+    // 504 Gateway Timeout handler for production
+    } else if (err.status === 504) {
         log.error("Gateway Timeout (504):", err);
         res.status(504);
         res.render('error', {
             message: 'Server timeout. Please try again later.',
             error: {} // No stacktrace leaked to user
         });
+    // General production error handler
     } else {
-        next(err);
-    }
-});
-
-// General production error handler
-// no stacktraces leaked to user
-app.use(function(err, req, res, next) {
-    log.error("Something went wrong:", err);
-    res.status(err.status || 500);
-    res.render('error', {
+        log.error("Something went wrong:", err);
+        res.status(err.status || 500);
+        res.render('error', {
         message: err.message,
         error: {}
-    });
+        });
+    }
 });
 
 
