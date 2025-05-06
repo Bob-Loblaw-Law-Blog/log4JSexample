@@ -44,6 +44,25 @@ app.use(function(req, res, next) {
 // development error handler
 // will print stacktrace
 if (app.get('env') === 'development') {
+    // Special handler for 404 errors in development
+    app.use(function(err, req, res, next) {
+        if (err.status === 404) {
+            log.warn("Resource not found:", { 
+                path: req.path, 
+                method: req.method,
+                error: err 
+            });
+            res.status(404);
+            res.render('error', {
+                message: 'Resource not found: ' + req.path,
+                error: err // Include stack trace for development
+            });
+            return;
+        }
+        next(err);
+    });
+
+    // General development error handler
     app.use(function(err, req, res, next) {
         log.error("Something went wrong:", err);
         res.status(err.status || 500);
@@ -57,12 +76,55 @@ if (app.get('env') === 'development') {
 // production error handler
 // no stacktraces leaked to user
 app.use(function(err, req, res, next) {
-    log.error("Something went wrong:", err);
-    res.status(err.status || 500);
-    res.render('error', {
-        message: err.message,
-        error: {}
-    });
+    switch (err.status) {
+        case 403:
+            log.error("Forbidden access attempt:", {
+                path: req.path,
+                method: req.method,
+                ip: req.ip,
+                error: err
+            });
+            res.status(403);
+            res.render('error', {
+                message: 'Access Forbidden',
+                error: {}  // No stack trace in production
+            });
+            break;
+
+        case 504:
+            log.error("Gateway Timeout:", {
+                path: req.path,
+                method: req.method,
+                error: err
+            });
+            res.status(504);
+            res.render('error', {
+                message: 'Service temporarily unavailable. Please try again later.',
+                error: {}  // No stack trace in production
+            });
+            break;
+
+        case 404:
+            log.warn("Resource not found:", {
+                path: req.path,
+                method: req.method,
+                error: err
+            });
+            res.status(404);
+            res.render('error', {
+                message: 'The requested resource could not be found',
+                error: {}  // No stack trace in production
+            });
+            break;
+
+        default:
+            log.error("Something went wrong:", err);
+            res.status(err.status || 500);
+            res.render('error', {
+                message: err.message,
+                error: {}  // No stack trace in production
+            });
+    }
 });
 
 
