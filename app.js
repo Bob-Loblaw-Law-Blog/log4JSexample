@@ -47,10 +47,10 @@ if (app.get('env') === 'development') {
     app.use(function(err, req, res, next) {
         // special handler for 404 errors in development
         if (err.status === 404) {
-            log.warn("404 Not Found in development environment:", err);
+            log.error("Resource Not Found", err);
             res.status(404);
             res.render('error', {
-                message: 'Resource not found - Development Environment',
+                message: err.message,
                 error: err
             });
         }
