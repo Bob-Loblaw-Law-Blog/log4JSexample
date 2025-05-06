@@ -47,19 +47,16 @@ if (app.get('env') === 'development') {
     // Special handler for 404 errors in development
     app.use(function(err, req, res, next) {
         if (err.status === 404) {
-            log.warn("Resource not found:", { 
-                path: req.path, 
-                method: req.method,
-                error: err 
-            });
+            log.warn("404 Not Found in development environment:", err);
             res.status(404);
             res.render('error', {
-                message: 'Resource not found: ' + req.path,
-                error: err // Include stack trace for development
+                message: 'Resource not found - Development Environment',
+                error: err // In development, we show the full error details
             });
-            return;
+        } else {
+            // Pass other errors to the general handler
+            next(err);
         }
-        next(err);
     });
 
     // General development error handler
@@ -73,58 +70,44 @@ if (app.get('env') === 'development') {
     });
 }
 
-// production error handler
+// Production-specific handlers for certain status codes
+// 403 Forbidden handler for production
+app.use(function(err, req, res, next) {
+    if (err.status === 403) {
+        log.error("Access Forbidden (403):", err);
+        res.status(403);
+        res.render('error', {
+            message: 'Access Forbidden',
+            error: {} // No stacktrace leaked to user
+        });
+    } else {
+        next(err);
+    }
+});
+
+// 504 Gateway Timeout handler for production
+app.use(function(err, req, res, next) {
+    if (err.status === 504) {
+        log.error("Gateway Timeout (504):", err);
+        res.status(504);
+        res.render('error', {
+            message: 'Server timeout. Please try again later.',
+            error: {} // No stacktrace leaked to user
+        });
+    } else {
+        next(err);
+    }
+});
+
+// General production error handler
 // no stacktraces leaked to user
 app.use(function(err, req, res, next) {
-    switch (err.status) {
-        case 403:
-            log.error("Forbidden access attempt:", {
-                path: req.path,
-                method: req.method,
-                ip: req.ip,
-                error: err
-            });
-            res.status(403);
-            res.render('error', {
-                message: 'Access Forbidden',
-                error: {}  // No stack trace in production
-            });
-            break;
-
-        case 504:
-            log.error("Gateway Timeout:", {
-                path: req.path,
-                method: req.method,
-                error: err
-            });
-            res.status(504);
-            res.render('error', {
-                message: 'Service temporarily unavailable. Please try again later.',
-                error: {}  // No stack trace in production
-            });
-            break;
-
-        case 404:
-            log.warn("Resource not found:", {
-                path: req.path,
-                method: req.method,
-                error: err
-            });
-            res.status(404);
-            res.render('error', {
-                message: 'The requested resource could not be found',
-                error: {}  // No stack trace in production
-            });
-            break;
-
-        default:
-            log.error("Something went wrong:", err);
-            res.status(err.status || 500);
-            res.render('error', {
-                message: err.message,
-                error: {}  // No stack trace in production
-            });
-    }
+    log.error("Something went wrong:", err);
+    res.status(err.status || 500);
+    res.render('error', {
+        message: err.message,
+        error: {}
+    });
 });
 
 
